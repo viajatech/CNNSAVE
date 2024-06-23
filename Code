@@ -1,0 +1,83 @@
+#by David Ruiz
+#Social media @viajatech
+
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+from tensorflow.keras.utils import plot_model
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Cargar y preparar el conjunto de datos CIFAR-10
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+# Definir el modelo de la red neuronal convolucional
+model = models.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(10)
+])
+
+# Ver la estructura del modelo en la consola
+model.summary()
+
+# Generar una imagen del modelo
+plot_model(model, to_file='modelo_cifar10.png', show_shapes=True, show_layer_names=True)
+
+# Compilar el modelo
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+# Entrenar el modelo y guardar el historial
+history = model.fit(train_images, train_labels, epochs=10, 
+                    validation_data=(test_images, test_labels))
+
+# Evaluar el modelo
+test_loss, test_acc = model.evaluate(test_images, test_labels, verbose=2)
+print('\nPrecisión del modelo en el conjunto de prueba:', test_acc)
+
+# Guardar el modelo
+model.save('mi_modelo_cifar10.h5')
+
+# Visualizar cómo mejora la precisión y disminuye la pérdida durante el entrenamiento
+plt.figure(figsize=(12,4))
+plt.subplot(1,2,1)
+plt.plot(history.history['accuracy'], label='Precisión de entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Precisión de validación')
+plt.xlabel('Época')
+plt.ylabel('Precisión')
+plt.legend()
+plt.title('Precisión durante el entrenamiento')
+
+plt.subplot(1,2,2)
+plt.plot(history.history['loss'], label='Pérdida de entrenamiento')
+plt.plot(history.history['val_loss'], label='Pérdida de validación')
+plt.xlabel('Época')
+plt.ylabel('Pérdida')
+plt.legend()
+plt.title('Pérdida durante el entrenamiento')
+plt.show()
+
+# Ver algunas imágenes de prueba y las predicciones del modelo
+class_names = ['avión', 'automóvil', 'pájaro', 'gato', 'ciervo',
+               'perro', 'rana', 'caballo', 'barco', 'camión']
+
+plt.figure(figsize=(10,10))
+for i in range(25):
+    plt.subplot(5,5,i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(test_images[i], cmap=plt.cm.binary)
+    predictions = model.predict(test_images[i:i+1])
+    predicted_label = np.argmax(predictions)
+    true_label = test_labels[i][0]
+    color = 'green' if predicted_label == true_label else 'red'
+    plt.xlabel(f"{class_names[predicted_label]} ({class_names[true_label]})", color=color)
+plt.show()
